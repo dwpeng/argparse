@@ -6,6 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SAFE_STR(s) ((void *)(s)) == NULL ? "" : ((char *)(s))
+#define REMOVE_PREFIX(s)                                                       \
+  do {                                                                         \
+    while ((s)[0] == '-')                                                      \
+      (s)++                                                                    \
+  } while (0)
+
 typedef struct CommandArg {
   /* 参数名
    * 1. 使用--或者-作为前缀的参数
@@ -32,7 +39,7 @@ typedef struct Command {
   /* 子命令的使用方法 */
   char *usage;
   /* 解析器的回调函数 */
-  void* (*callback)(int nargs, CommandArg *args);
+  void *(*callback)(int nargs, CommandArg *args);
   /* 解析器的参数个数 */
   int nargs;
   /* 必须要传递的参数个数 */
@@ -56,6 +63,8 @@ typedef struct ArgumentParser {
   Command *generic_cmd;
   /* 子命令 */
   Command **cmd;
+  /* 当前命令行解析的通用参数和子命令的参数 */
+  Command* now_command[2];
 } ArgumentParser;
 
 /* 全局只使用一个解析器 */
