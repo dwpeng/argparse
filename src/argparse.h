@@ -7,12 +7,10 @@
 #include <string.h>
 
 #define SAFE_STR(s) ((void *)(s)) == NULL ? "" : ((char *)(s))
-#define REMOVE_PREFIX(s)                                                       \
-  do {                                                                         \
-    while ((s)[0] == '-')                                                      \
-      (s)++                                                                    \
-  } while (0)
+#define YES (void*)1
+#define NO (void*)2
 
+#define BOOL(s) (s) == YES?1:0
 typedef struct CommandArg {
   /* 参数名
    * 1. 使用--或者-作为前缀的参数
@@ -23,6 +21,8 @@ typedef struct CommandArg {
   //   ArgNargs arg_nargs;
   /* 参数是否为必须参数 */
   int required;
+  /* 参数是否需要跟值 */
+  int no_value;
   /* 参数的初始值 */
   void *init;
   /* 用于存放参数的真值 */
@@ -38,12 +38,12 @@ typedef struct Command {
   char *description;
   /* 子命令的使用方法 */
   char *usage;
+  /* 位置参数的个数 */
+  int pos_narg;
   /* 解析器的回调函数 */
-  void *(*callback)(int nargs, CommandArg *args);
+  void *(*callback)(struct Command *cmd1, struct Command *cmd2);
   /* 解析器的参数个数 */
   int nargs;
-  /* 必须要传递的参数个数 */
-  int required_nargs;
   /* 存放的参数个数 */
   struct CommandArg *args;
 } Command;
@@ -64,13 +64,13 @@ typedef struct ArgumentParser {
   /* 子命令 */
   Command **cmd;
   /* 当前命令行解析的通用参数和子命令的参数 */
-  Command* now_command[2];
+  Command *now_command[2];
 } ArgumentParser;
 
 /* 全局只使用一个解析器 */
 extern struct ArgumentParser *__parser;
 
-typedef void *(*callback_t)(int nargs, CommandArg *args);
+typedef void *(*callback_t)(Command *cmd1, Command *cmd2);
 void *argparse_add_command(char *command_name, char *description, char *usage,
                            callback_t callback, CommandArg *args);
 void argparse_init_parser(char *prog, char *description, char *usage);
