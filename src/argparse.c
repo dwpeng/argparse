@@ -122,7 +122,7 @@ void *argparse_add_command(char *command_name, char *description, char *usage,
   /* 检查每一个参数的情况 */
   CommandArg arg;
   int c = 0;
-  int bitmap_args = 0x0000;
+  unsigned long long bitmap_args = 0ULL;
   char *arg_flag = NULL;
   while (1) {
     arg = args[c];
@@ -151,12 +151,21 @@ void *argparse_add_command(char *command_name, char *description, char *usage,
         printf("Blank arg: <%s> found. Check again.\n", arg.flag);
         goto clean;
       }
-      int bitmap_arg_pos = (0x0001 << (arg_flag[0] - 61));
-      if ((bitmap_args & bitmap_arg_pos) == bitmap_arg_pos) {
-        printf("Duplicated arg: <%s> found. Check again.\n", arg.flag);
-        goto clean;
+      /* 检查首字符是否为字母 */
+      char first_c = arg_flag[0];
+      if ((first_c >= 'a' && first_c < 'z') ||
+          (first_c >= 'A' && first_c <= 'Z')) {
+        unsigned long long bitmap_arg_pos = (1ULL << (arg_flag[0] - 61));
+        if ((bitmap_args & bitmap_arg_pos) == bitmap_arg_pos) {
+          printf("Duplicated arg: <%s> found. Check again.\n", arg.flag);
+          goto clean;
+        }
+        bitmap_args |= bitmap_arg_pos;
+      } else {
+        printf("Got a wrong arg: <%s>. The arg should start from one of "
+               "[a-zA-z].\n",
+               arg.flag);
       }
-      bitmap_args |= bitmap_arg_pos;
     }
     c++;
   }
@@ -229,21 +238,40 @@ void argparse_parse_args(int argc, char *argv[]) {
       goto clean;
     }
   }
-  /* 处理-h和--help */
-  if (strcmp(argv[1 + has_subcommand], "-h") == 0 ||
-      strcmp(argv[1], "--help") == 0) {
-    if (has_subcommand) {
-      argparse_print_command(NULL);
-    } else {
-      argparse_print_parser();
+  if (1 + has_subcommand < argc) {
+    /* 处理-h和--help */
+    if (strcmp(argv[1 + has_subcommand], "-h") == 0 ||
+        strcmp(argv[1], "--help") == 0) {
+      if (has_subcommand) {
+        argparse_print_command(NULL);
+      } else {
+        argparse_print_parser();
+      }
+      goto clean;
     }
-    goto clean;
   }
   /* 更新argc的值 */
   /* 解析参数 */
-  for (int j = 1 + has_subcommand; j < argc; j++) {
-    /* 解析位置参数 */
-    /* 检查通用命令是否有位置参数 */
+
+  /* 解析位置参数 */
+  /* 检查通用命令是否有位置参数 */
+  int j = 1 + has_subcommand;
+  if (has_subcommand) {
+    if (__parser->now_command[1]) {
+      for (int x = 0; x < __parser->now_command[1]->pos_narg; x++) {
+        if (j + x < argc) {
+          if (argv[j + x][0] == '-') {
+            printf("Lost pos arg: <%s>\n",
+                   __parser->now_command[1]->args[x].flag);
+            goto clean;
+          }
+          __parser->now_command[1]->args[x].value = argv[j + x];
+        }
+      }
+      j = j + __parser->now_command[1]->pos_narg;
+    }
+  }
+  for (; j < argc; j++) {
     int find = 0;
     for (int i = 0; i < 2; i++) {
       if (__parser->now_command[i] == NULL) {
