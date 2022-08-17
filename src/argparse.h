@@ -7,8 +7,8 @@
 #include <string.h>
 
 #define SAFE_STR(s) ((void *)(s)) == NULL ? "" : ((char *)(s))
-#define YES (void*)1
-#define NO (void*)2
+#define YES (void*)"1"
+#define NO (void*)"0"
 
 #define BOOL(s) (s) == YES?1:0
 typedef struct CommandArg {
@@ -41,7 +41,7 @@ typedef struct Command {
   /* 位置参数的个数 */
   int pos_narg;
   /* 解析器的回调函数 */
-  void *(*callback)(struct Command *cmd1, struct Command *cmd2);
+  void (*callback)(void);
   /* 解析器的参数个数 */
   int nargs;
   /* 存放的参数个数 */
@@ -67,14 +67,24 @@ typedef struct ArgumentParser {
   Command *now_command[2];
 } ArgumentParser;
 
+typedef struct args_t{
+    char* name;
+    void* value;
+}args_t;
+
+extern struct args_t** args;
+extern int nargs;
+
+
 /* 全局只使用一个解析器 */
 extern struct ArgumentParser *__parser;
 
-typedef void *(*callback_t)(Command *cmd1, Command *cmd2);
+typedef void (*callback_t)(void);
 void *argparse_add_command(char *command_name, char *description, char *usage,
                            callback_t callback, CommandArg *args);
 void argparse_init_parser(char *prog, char *description, char *usage);
 void argparse_parse_args(int argc, char *argv[]);
+void* get_arg(char* name);
 void argparse_print_parser();
-void argparse_print_command();
+void argparse_print_command(Command *cmd);
 #endif

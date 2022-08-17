@@ -3,6 +3,8 @@
 /* 初始化全局唯一的解析器 */
 struct ArgumentParser _parser = {"", ""};
 struct ArgumentParser *__parser = &_parser;
+args_t **args = NULL;
+int nargs = 0;
 
 static inline Command *__create_command() {
   Command *cmd;
@@ -45,6 +47,9 @@ static inline void __update_parser_by_command(Command *cmd) {
  * 打印子命令信息
  */
 void argparse_print_command(Command *cmd) {
+  if (cmd == NULL) {
+    cmd = __parser->now_command[1];
+  }
   printf("%s", cmd->name);
   printf("%s", SAFE_STR(cmd->description));
   printf("%s\n", SAFE_STR(cmd->usage));
@@ -225,8 +230,13 @@ void argparse_parse_args(int argc, char *argv[]) {
     }
   }
   /* 处理-h和--help */
-  if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-    argparse_print_parser();
+  if (strcmp(argv[1 + has_subcommand], "-h") == 0 ||
+      strcmp(argv[1], "--help") == 0) {
+    if (has_subcommand) {
+      argparse_print_command(NULL);
+    } else {
+      argparse_print_parser();
+    }
     goto clean;
   }
   /* 更新argc的值 */
@@ -283,33 +293,66 @@ void argparse_parse_args(int argc, char *argv[]) {
     for (int n = 0; n < cmd->nargs; n++) {
 
       /* 为不需要跟参数值的参数加上NO */
-      if (cmd->args[n].no_value && !cmd->args[n].required) {
+      if (cmd->args[n].no_value && (void *)cmd->args[n].value == NULL) {
         cmd->args[n].value = NO;
       }
       if (cmd->args[n].required) {
-        if (!cmd->args[n].value) {
-          printf("Arg: <%s> is required.\n", cmd->args[n].flag);
-          goto clean;
-        }
         /* 有初始值的视为传递参数 */
         if (cmd->args[n].init) {
           cmd->args[n].value = cmd->args[n].init;
           continue;
         }
+        if (!cmd->args[n].value) {
+          printf("Arg: <%s> is required.\n", cmd->args[n].flag);
+          goto clean;
+        }
       }
     }
   }
 
-  /* 开始回调函数 */
+  /*统计参数总个数*/
   for (int i = 0; i < 2; i++) {
     if (__parser->now_command[i] == NULL) {
       continue;
     }
-    __parser->now_command[i]->callback(__parser->now_command[0],
-                                       __parser->now_command[1]);
+    nargs += __parser->now_command[i]->nargs;
   }
 
-  goto clean;
+  /* 整合参数 */
+  args = malloc(sizeof(struct args_t *) * nargs);
+  for (int i = 0; i < nargs; i++) {
+    args[i] = calloc(1, sizeof(args_t));
+  }
+
+  int count = 0;
+  /* 创建参数 */
+  for (int i = 0; i < 2; i++) {
+    if (__parser->now_command[i] == NULL) {
+      continue;
+    }
+    for (int j = 0; j < __parser->now_command[i]->nargs; j++) {
+      char *name = __parser->now_command[i]->args[j].flag;
+      while (name[0] == '-')
+        name++;
+      args[count]->name = name;
+      args[count]->value = __parser->now_command[i]->args[j].value;
+      count++;
+    }
+  }
+  /* 开始回调函数 */
+  /* 如果有子命令，那么只调用子命令的回调函数 */
+  int i = 0;
+  if (__parser->now_command[1]) {
+    i = 1;
+  }
+  /* 调用 */
+  __parser->now_command[i]->callback();
+
+  /* 释放所有的参数 */
+  for (int i = 0; i < nargs; i++) {
+    free(args[i]);
+  }
+  free(args);
 
 clean:
   /* 释放所有的command */
@@ -320,4 +363,14 @@ clean:
     free(__parser->cmd[i]);
   }
   free(__parser->cmd);
+}
+
+void *get_arg(char *name) {
+  for (int i = 0; i < nargs; i++) {
+    if (strcmp(name, args[i]->name) == 0) {
+      return args[i]->value;
+    }
+  }
+  printf("Got a undefined arg: <%s>\n", name);
+  return NULL;
 }
