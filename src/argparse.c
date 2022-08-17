@@ -266,6 +266,10 @@ void argparse_parse_args(int argc, char *argv[]) {
             goto clean;
           }
           __parser->now_command[1]->args[x].value = argv[j + x];
+        } else {
+          printf("Lost pos arg: <%s>\n",
+                 __parser->now_command[1]->args[x].flag);
+          goto clean;
         }
       }
       j = j + __parser->now_command[1]->pos_narg;
@@ -391,6 +395,7 @@ clean:
     free(__parser->cmd[i]);
   }
   free(__parser->cmd);
+  exit(1);
 }
 
 void *get_arg(char *name) {

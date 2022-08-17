@@ -26,7 +26,7 @@ typedef struct CommandArg {
 } CommandArg;
 ```
 
-- `char* flag`: 参数名，可以为`-s`、`--size`和`size`，其中以`-`开头的参数默认为可选参数，没有以`-`开头的参数为位置参数（还没有实现）
+- `char* flag`: 参数名，可以为`-s`、`--size`和`size`，其中以`-`开头的参数默认为可选参数，没有以`-`开头的参数为位置参数
 - `int required`: 是否为必须参数，使用可选值0/1，默认0
 - `int no_value`: 参数后是否跟随参数值，默认为0
 - `void* init`: 参数的默认值
