@@ -50,7 +50,7 @@ void argparse_print_command(Command *cmd) {
   if (cmd == NULL) {
     cmd = __parser->now_command[1];
   }
-  printf("%s", cmd->name);
+  printf("%s\n", cmd->name);
   printf("%s", SAFE_STR(cmd->description));
   printf("%s\n", SAFE_STR(cmd->usage));
   for (int i = 0; i < cmd->nargs; i++) {
@@ -70,16 +70,18 @@ void argparse_print_parser() {
   printf("%s\n", SAFE_STR(__parser->usage));
   if (__parser->generic_cmd) {
     printf("Generic argument:\n");
-    argparse_print_command(__parser->generic_cmd);
-    printf("\n");
+    for (int i = 0; i < __parser->generic_cmd->nargs; i++) {
+      printf("    %s\t%s\n", SAFE_STR(__parser->generic_cmd->args[i].flag),
+             SAFE_STR(__parser->generic_cmd->args[i].help));
+    }
   }
   if (__parser->ncmd) {
     printf("Commands:\n");
     for (int i = 0; i < __parser->ncmd; i++) {
-      argparse_print_command(__parser->cmd[i]);
+      printf("    %s\t%s\n", SAFE_STR(__parser->cmd[i]->name),
+             SAFE_STR(__parser->cmd[i]->description));
     }
   }
-  printf("\n");
 }
 
 /***

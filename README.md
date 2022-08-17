@@ -109,6 +109,40 @@ int main(int argc, char* argv[]){
 }
 ```
 
+一个小例子
+```c
+#include "argparse.h"
+
+static CommandArg list_args[] = {
+    {.flag = "file", .help="file help"},
+    {.flag = "kmer", .help="kmer help"},
+    {.flag = "--help", .required = 1, .no_value = 1, .help="--help arg does not need value"},
+    {.flag = "--size", .no_value = 1, .init = "ssss", .help="--size arg does not need value"},
+    {0}};
+
+static CommandArg global_args[] = {
+    {.flag="-k", .help="kmer size"},
+    {.flag="-s", .help="the size"},
+    {0}
+};
+
+void handle_list() {
+  printf("%s\n", get_arg("file"));
+  printf("%s\n", get_arg("kmer"));
+  printf("%s\n", get_arg("help"));
+  printf("%s\n", get_arg("size"));
+}
+
+int main(int argc, char *argv[]) {
+  argparse_init_parser("Test\n", "This is a test\n", "This is a usage\n");
+
+  argparse_add_command("list", "This is a subcommand.\n", "This is a usage.",
+                       handle_list, list_args);
+  argparse_add_command("", "This is a list command.\n",
+                       "This is a usage.", NULL, global_args);
+  argparse_parse_args(argc, argv);
+}
+```
 ## 命令行传参方式
 
 ### 使用首字母进行传参
